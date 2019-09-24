@@ -22,12 +22,16 @@ class MainActivity : AppCompatActivity() {
     private var mDay: Int = 0
     private var mHour: Int = 0
     private var mMinute: Int = 0
+    private var requestCode = 0
     private lateinit var alarmManager: AlarmManager
-    private lateinit var pendingIntent: PendingIntent
+    private val sp by lazy {
+        getSharedPreferences("user", Context.MODE_PRIVATE)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        requestCode = sp.getInt("requestCode", 0)
         // 设置默认为今天
         val calendar = Calendar.getInstance()
         mYear = calendar.get(Calendar.YEAR)
@@ -36,20 +40,9 @@ class MainActivity : AppCompatActivity() {
         tvDate.text = String.format("%s月%d号", mMonth + 1, mDay)
         tvTime.setOnClickListener { setTime() }
         tvDate.setOnClickListener { setDate() }
-        tvAlarm.setOnClickListener { setAlarm() }
-        initAlarm()
-    }
-
-    // 初始化闹钟
-    private fun initAlarm() {
+        tvAlarmAdd.setOnClickListener { setAlarm() }
         // 实例化AlarmManager
         alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        // 设置闹钟触发动作
-        val intent = Intent(this, AlarmBroadcast::class.java)
-        intent.action = "startAlarm"
-        pendingIntent = PendingIntent.getBroadcast(this, 10086, intent, PendingIntent.FLAG_CANCEL_CURRENT)
-        // 设置时区（东八区）-需要加权限SET_TIME_ZONE
-//        alarmManager.setTimeZone("GMT+08:00")
     }
 
     private fun setDate() {
@@ -71,7 +64,8 @@ class MainActivity : AppCompatActivity() {
             mMinute = minute
             val format = if (minute > 9) "%s:%s" else "%s:0%s"
             tvTime.text = String.format(format, hourOfDay, minute)
-            tvAlarm.visibility = View.VISIBLE
+            tvAlarmAdd.visibility = View.VISIBLE
+            tvStatus.visibility = View.GONE
         }, currentCalendar.get(Calendar.HOUR_OF_DAY), currentCalendar.get(Calendar.MINUTE), true).show()
     }
 
@@ -82,12 +76,21 @@ class MainActivity : AppCompatActivity() {
         currentCalendar.set(Calendar.HOUR_OF_DAY, mHour)
         currentCalendar.set(Calendar.MINUTE, mMinute)
         currentCalendar.set(Calendar.SECOND, 0)
+        // 设置闹钟触发动作
+        val intent = Intent(this, AlarmBroadcast::class.java)
+        intent.action = "startAlarm"
+        requestCode++
+        sp.edit().putInt("requestCode", requestCode).apply()
+        val pendingIntent = PendingIntent.getBroadcast(this, requestCode, intent, PendingIntent.FLAG_CANCEL_CURRENT)
+        // 设置时区（东八区）-需要加权限SET_TIME_ZONE
+        // alarmManager.setTimeZone("GMT+08:00")
         // 设置闹钟
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, currentCalendar.timeInMillis, pendingIntent)
         } else {
             alarmManager.setExact(AlarmManager.RTC_WAKEUP, currentCalendar.timeInMillis, pendingIntent)
         }
-        tvAlarm.text = "设置成功，放心的去浪吧！"
+        tvAlarmAdd.visibility = View.GONE
+        tvStatus.visibility = View.VISIBLE
     }
 }

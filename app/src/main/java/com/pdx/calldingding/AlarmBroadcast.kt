@@ -26,7 +26,7 @@ class AlarmBroadcast : BroadcastReceiver() {
                     dd.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     context.startActivity(dd)
                 }
-            }, 666)
+            }, 777)
         }
     }
 }
